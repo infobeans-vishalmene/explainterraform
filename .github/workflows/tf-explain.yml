@@ -50,9 +50,12 @@ jobs:
         run: |
           cd tf-explain
           
-          # 1. Print plan.json preview to verify valid JSON content
-          echo "=== PLAN JSON PREVIEW ==="
-          head -n 20 ../plan.json
+          # 1. Validate JSON completeness without truncating it
+          jq empty plan.json || (echo "ERROR: plan.json is corrupt or incomplete" && exit 1)
+
+          # 2. Print a safe 2-line condensed preview to logs
+          echo "=== PLAN JSON SUMMARY ==="
+          jq '{format_version, terraform_version, resource_changes_count: (.resource_changes | length)}' plan.json
           
           # 2. Run the Go binary and print stdout + stderr directly to logs
           go run . ../plan.json > ../ai_comment.md 2>&1 || (cat ../ai_comment.md && exit 1)

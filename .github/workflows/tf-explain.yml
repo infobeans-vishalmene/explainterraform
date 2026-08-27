@@ -38,23 +38,25 @@ jobs:
           terraform show -json tfplan.binary > plan.json
 
       # 5. Build and Run the Go AI Explainer
+     # 5. Build and Run the Go AI Explainer
       - name: Generate AI Explanation
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          # 1. Validate plan.json at the repository root BEFORE changing directories
-          jq empty plan.json || (echo "ERROR: plan.json is corrupt or incomplete" && exit 1)
-
+          # 1. Validate plan.json at root
+          jq empty plan.json || (echo "ERROR: plan.json is corrupt" && exit 1)
+          
           echo "=== PLAN JSON SUMMARY ==="
           jq '{format_version, terraform_version, resource_changes_count: (.resource_changes | length)}' plan.json
 
-          # 2. Change directory into your Go app folder
+          # 2. Build the Go binary cleanly into a standalone executable
           cd tf-explain
+          go build -o tf-explain-bin .
           
-          # 3. Execute Go binary against the root plan.json file
-          go run . ../plan.json > ../ai_comment.md 2>&1 || (cat ../ai_comment.md && exit 1)
-
-          # 4. Output verification
+          # 3. Execute the pre-built binary
+          ./tf-explain-bin ../plan.json > ../ai_comment.md
+          
+          # 4. Print output to GitHub logs for verification
           echo "=== AI OUTPUT GENERATED SUCCESSFULLY ==="
           cat ../ai_comment.md
       # 6. Post the Markdown Analysis as a PR Comment

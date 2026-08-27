@@ -1,0 +1,41 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_security_group.allow_all",
+      "type": "aws_security_group",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "name": "allow_all_traffic",
+          "ingress": [{ "cidr_blocks": ["0.0.0.0/0"], "from_port": 22, "to_port": 22, "protocol": "tcp" }]
+        }
+      }
+    },
+    {
+      "address": "aws_db_instance.prod_db",
+      "type": "aws_db_instance",
+      "change": {
+        "actions": ["update"],
+        "before": { "allocated_storage": 20, "instance_class": "db.t3.micro", "password": "old_password" },
+        "after": { "allocated_storage": 100, "instance_class": "db.t3.large", "password": "new_password" },
+        "after_sensitive": { "password": true }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.legacy_logs",
+      "type": "aws_s3_bucket",
+      "change": {
+        "actions": ["delete"],
+        "before": { "bucket": "my-legacy-logs-bucket-2021" }
+      }
+    },
+    {
+      "address": "aws_vpc.main",
+      "type": "aws_vpc",
+      "change": {
+        "actions": ["no-op"],
+        "before": { "cidr_block": "10.0.0.0/16" }
+      }
+    }
+  ]
+}

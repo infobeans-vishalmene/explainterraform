@@ -1,0 +1,52 @@
+name: "Terraform AI Plan Explainer"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**.tf" # Only run when Terraform files are modified
+
+jobs:
+  explain-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # Grants permissions to comment on the PR
+
+    steps:
+      # 1. Checkout repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Go environment
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      # 3. Setup HashiCorp Terraform CLI
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false # Disable wrapper to get clean stdout/JSON output
+
+      # 4. Run Terraform Init & Plan
+      - name: Terraform Init & Plan
+        run: |
+          terraform init
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > plan.json
+
+      # 5. Build and Run the Go AI Explainer
+      - name: Generate AI Explanation
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd tf-explain
+          go run . ../plan.json > ../ai_comment.md
+
+      # 6. Post the Markdown Analysis as a PR Comment
+      - name: Post Comment to PR
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          file-path: ai_comment.md
+          comment-tag: "tf-explain-analysis" # Overwrites old comments on new commits instead of spamming

@@ -34,7 +34,7 @@ jobs:
       - name: Terraform Init & Plan
         run: |
           terraform init
-          terraform plan -out=tfplan.binary
+          terraform plan -out tfplan.binary
           terraform show -json tfplan.binary > plan.json
 
       # 5. Build and Run the Go AI Explainer

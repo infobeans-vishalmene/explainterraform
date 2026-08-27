@@ -34,35 +34,44 @@ func main() {
 
 	apiKey := os.Getenv("OPENROUTER_API_KEY")
 	if apiKey == "" {
-		fmt.Println("Error: OPENROUTER_API_KEY environment variable is not set.")
+		fmt.Fprintln(os.Stderr, "Error: OPENROUTER_API_KEY is missing.")
 		os.Exit(1)
 	}
 
 	var rawJSON []byte
 	var err error
 
-	stat, _ := os.Stdin.Stat()
-	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		rawJSON, err = io.ReadAll(os.Stdin)
-	} else if len(os.Args) > 1 {
-		rawJSON, err = os.ReadFile(os.Args[1])
+	// FIX: Prioritize command-line file argument over stdin!
+	if len(os.Args) > 1 {
+		filePath := os.Args[1]
+		rawJSON, err = os.ReadFile(filePath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading file %s: %v\n", filePath, err)
+			os.Exit(1)
+		}
 	} else {
-		fmt.Println("Usage: cat plan.json | go run .  OR  go run . plan.json")
-		os.Exit(1)
+		// Check if standard input has data piped into it
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeCharDevice) == 0 {
+			rawJSON, err = io.ReadAll(os.Stdin)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, "Usage: tf-explain <plan.json> OR cat plan.json | tf-explain")
+			os.Exit(1)
+		}
 	}
 
-	if err != nil {
-		fmt.Printf("Error reading file: %v\n", err)
-		os.Exit(1)
-	}
+	// Clean UTF Byte Order Marks
+	rawJSON = bytes.TrimPrefix(rawJSON, []byte("\xef\xbb\xbf"))
+	rawJSON = bytes.TrimPrefix(rawJSON, []byte("\xff\xfe"))
 
-	rawJSON = bytes.TrimPrefix(rawJSON, []byte("\xef\xbb\xbf")) // UTF-8 BOM
-	rawJSON = bytes.TrimPrefix(rawJSON, []byte("\xff\xfe"))     // UTF-16LE BOM
-	
-	// Step 1: Filter the JSON
+	// Step 1: Parse and Filter JSON
 	filteredPlan, err := ParseAndFilter(rawJSON)
 	if err != nil {
-		fmt.Printf("Filter error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Filter error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -80,7 +89,7 @@ Output Format:
 3. Security & Destructive Action Warnings: Explicitly highlight deletions or unsafe configurations.`, string(filteredJSONBytes))
 
 	reqBody := OpenRouterRequest{
-		Model: "meta-llama/llama-3.3-70b-instruct", // Free/low-cost fast OpenRouter model
+		Model: "meta-llama/llama-3.3-70b-instruct",
 		Messages: []Message{
 			{Role: "user", Content: prompt},
 		},
@@ -88,7 +97,7 @@ Output Format:
 
 	jsonReq, _ := json.Marshal(reqBody)
 
-	// Step 3: Send HTTP Request to OpenRouter
+	// Step 3: Send HTTP Request
 	req, _ := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonReq))
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
@@ -96,7 +105,7 @@ Output Format:
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("HTTP Request failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "HTTP Request failed: %v\n", err)
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
@@ -104,17 +113,20 @@ Output Format:
 	respBody, _ := io.ReadAll(resp.Body)
 
 	var apiResp OpenRouterResponse
-	json.Unmarshal(respBody, &apiResp)
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to parse LLM API response: %v\nRaw response: %s\n", err, string(respBody))
+		os.Exit(1)
+	}
 
 	if apiResp.Error != nil {
-		fmt.Printf("OpenRouter API Error: %s\n", apiResp.Error.Message)
+		fmt.Fprintf(os.Stderr, "OpenRouter API Error: %s\n", apiResp.Error.Message)
 		os.Exit(1)
 	}
 
 	if len(apiResp.Choices) > 0 {
-		fmt.Println("\n--- TERRAFORM PLAN EXPLANATION ---")
 		fmt.Println(apiResp.Choices[0].Message.Content)
 	} else {
-		fmt.Println("No response generated.")
+		fmt.Fprintln(os.Stderr, "No response generated from model.")
+		os.Exit(1)
 	}
 }

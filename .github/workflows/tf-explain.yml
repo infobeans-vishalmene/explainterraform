@@ -60,8 +60,8 @@ jobs:
           ./tf-explain-bin ../plan.json
           
           # 4. Print output to GitHub logs for verification
-          echo "=== AI OUTPUT GENERATED SUCCESSFULLY ==="
-          cat ../ai_comment.md
+          #echo "=== AI OUTPUT GENERATED SUCCESSFULLY ==="
+          #cat ../ai_comment.md
       # # 6. Post the Markdown Analysis as a PR Comment
       # - name: Post Comment to PR
       #   uses: thollander/actions-comment-pull-request@v3

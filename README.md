@@ -214,20 +214,3 @@ jobs:
 
 ---
 
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-```
-
-***
-
-<ElicitationsGroup message="Is there anything else you'd like to update?">
-
-  <Elicitation label="Add an MIT LICENSE file to the repository" query="Generate a standard MIT LICENSE file for this project."/>
-
-  <Elicitation label="Add custom flags (e.g., model selection, output format)" query="How can we add command-line flags to Go using the flag package to select different OpenRouter models?"/>
-
-</ElicitationsGroup>
-
-```

@@ -47,6 +47,11 @@ type FilteredResourceChange struct {
 }
 
 func ParseAndFilter(rawJSON []byte) (*FilteredPlan, error) {
+	
+	if len(rawJSON) == 0 {
+		return nil, fmt.Errorf("received empty JSON input")
+	}
+
 	var rawPlan Plan
 	if err := json.Unmarshal(rawJSON, &rawPlan); err != nil {
 		return nil, fmt.Errorf("failed to parse terraform JSON: %w", err)

@@ -42,12 +42,8 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          cat plan.json
           # 1. Validate plan.json at root
           jq empty plan.json || (echo "ERROR: plan.json is corrupt" && exit 1)
-          
-          echo "=== PLAN JSON SUMMARY ==="
-          jq '{format_version, terraform_version, resource_changes_count: (.resource_changes | length)}' plan.json
 
           # 2. Build the Go binary cleanly into a standalone executable
           cd tf-explain
@@ -56,9 +52,6 @@ jobs:
           # 3. Execute the pre-built binary
           ./tf-explain-bin ../plan.json > ../ai_comment.md
           
-          # 4. Print output to GitHub logs for verification
-          echo "=== AI OUTPUT GENERATED SUCCESSFULLY ==="
-          cat ../ai_comment.md
       # 6. Post the Markdown Analysis as a PR Comment
       - name: Post Comment to PR
         uses: thollander/actions-comment-pull-request@v3

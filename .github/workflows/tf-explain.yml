@@ -54,14 +54,15 @@ jobs:
           go build -o tf-explain-bin .
           
           # 3. Execute the pre-built binary
-          ./tf-explain-bin ../plan.json > ../ai_comment.md
+          # ./tf-explain-bin ../plan.json > ../ai_comment.md
+          ./tf-explain-bin ../plan.json
           
           # 4. Print output to GitHub logs for verification
           echo "=== AI OUTPUT GENERATED SUCCESSFULLY ==="
           cat ../ai_comment.md
-      # 6. Post the Markdown Analysis as a PR Comment
-      - name: Post Comment to PR
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          file-path: ai_comment.md
-          comment-tag: "tf-explain-analysis" # Overwrites old comments on new commits instead of spamming
+      # # 6. Post the Markdown Analysis as a PR Comment
+      # - name: Post Comment to PR
+      #   uses: thollander/actions-comment-pull-request@v3
+      #   with:
+      #     file-path: ai_comment.md
+      #     comment-tag: "tf-explain-analysis" # Overwrites old comments on new commits instead of spamming
